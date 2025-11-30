@@ -1,0 +1,656 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useAdminStore } from '@/stores/adminStore';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Settings,
+  Store,
+  CreditCard,
+  Mail,
+  Bell,
+  Shield,
+  Save,
+  RotateCcw,
+  Loader2,
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { PlatformSettings } from '@/types/admin';
+
+export default function AdminSettingsPage() {
+  const { toast } = useToast();
+  const { settings, settingsLoading, fetchSettings, updateSettings } = useAdminStore();
+  
+  const [formData, setFormData] = useState<Partial<PlatformSettings>>({});
+  const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  useEffect(() => {
+    if (settings) {
+      setFormData(settings);
+    }
+  }, [settings]);
+
+  const handleChange = (key: string, value: unknown) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    setHasChanges(true);
+  };
+
+  const handleNestedChange = (parent: string, key: string, value: unknown) => {
+    setFormData((prev) => ({
+      ...prev,
+      [parent]: {
+        ...(prev[parent as keyof PlatformSettings] as Record<string, unknown> || {}),
+        [key]: value,
+      },
+    }));
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateSettings(formData as PlatformSettings);
+      toast({
+        title: 'Settings saved',
+        description: 'Platform settings have been updated successfully',
+      });
+      setHasChanges(false);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to save settings',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    if (settings) {
+      setFormData(settings);
+      setHasChanges(false);
+    }
+  };
+
+  if (settingsLoading || !settings) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">Platform configuration</p>
+        </div>
+        <div className="space-y-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">Platform configuration</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasChanges && (
+            <Button variant="outline" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+          )}
+          <Button onClick={handleSave} disabled={saving || !hasChanges}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Save Changes
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="general" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="general">
+            <Settings className="h-4 w-4 mr-2" />
+            General
+          </TabsTrigger>
+          <TabsTrigger value="vendor">
+            <Store className="h-4 w-4 mr-2" />
+            Vendor
+          </TabsTrigger>
+          <TabsTrigger value="payment">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Payment
+          </TabsTrigger>
+          <TabsTrigger value="notifications">
+            <Bell className="h-4 w-4 mr-2" />
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="security">
+            <Shield className="h-4 w-4 mr-2" />
+            Security
+          </TabsTrigger>
+        </TabsList>
+
+        {/* General Settings */}
+        <TabsContent value="general" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Information</CardTitle>
+              <CardDescription>Basic platform settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="platformName">Platform Name</Label>
+                  <Input
+                    id="platformName"
+                    value={formData.platformName || ''}
+                    onChange={(e) => handleChange('platformName', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supportEmail">Support Email</Label>
+                  <Input
+                    id="supportEmail"
+                    type="email"
+                    value={formData.supportEmail || ''}
+                    onChange={(e) => handleChange('supportEmail', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="platformDescription">Platform Description</Label>
+                <Textarea
+                  id="platformDescription"
+                  value={formData.platformDescription || ''}
+                  onChange={(e) => handleChange('platformDescription', e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Default Currency</Label>
+                  <Select
+                    value={formData.currency || 'USD'}
+                    onValueChange={(value) => handleChange('currency', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD - US Dollar</SelectItem>
+                      <SelectItem value="EUR">EUR - Euro</SelectItem>
+                      <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                      <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                      <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Select
+                    value={formData.timezone || 'America/New_York'}
+                    onValueChange={(value) => handleChange('timezone', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="America/New_York">Eastern Time</SelectItem>
+                      <SelectItem value="America/Chicago">Central Time</SelectItem>
+                      <SelectItem value="America/Denver">Mountain Time</SelectItem>
+                      <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                      <SelectItem value="UTC">UTC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Maintenance Mode</CardTitle>
+              <CardDescription>Control platform availability</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Enable Maintenance Mode</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Platform will be inaccessible to regular users
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.maintenanceMode || false}
+                  onCheckedChange={(checked) => handleChange('maintenanceMode', checked)}
+                />
+              </div>
+              {formData.maintenanceMode && (
+                <div className="space-y-2">
+                  <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
+                  <Textarea
+                    id="maintenanceMessage"
+                    value={formData.maintenanceMessage || ''}
+                    onChange={(e) => handleChange('maintenanceMessage', e.target.value)}
+                    placeholder="We'll be back soon..."
+                    rows={2}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Vendor Settings */}
+        <TabsContent value="vendor" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Vendor Registration</CardTitle>
+              <CardDescription>Control vendor onboarding</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Allow New Vendor Registration</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enable or disable new vendor signups
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.vendorSettings as Record<string, boolean>)?.allowRegistration ?? true}
+                  onCheckedChange={(checked) => handleNestedChange('vendorSettings', 'allowRegistration', checked)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Require Manual Approval</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Vendors need admin approval before going live
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.vendorSettings as Record<string, boolean>)?.requireApproval ?? true}
+                  onCheckedChange={(checked) => handleNestedChange('vendorSettings', 'requireApproval', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Commission Settings</CardTitle>
+              <CardDescription>Platform commission rates</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="defaultCommission">Default Commission Rate (%)</Label>
+                  <Input
+                    id="defaultCommission"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={(formData.vendorSettings as Record<string, number>)?.defaultCommission || 10}
+                    onChange={(e) => handleNestedChange('vendorSettings', 'defaultCommission', parseFloat(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="minPayout">Minimum Payout Amount ($)</Label>
+                  <Input
+                    id="minPayout"
+                    type="number"
+                    min="0"
+                    value={(formData.vendorSettings as Record<string, number>)?.minPayoutAmount || 50}
+                    onChange={(e) => handleNestedChange('vendorSettings', 'minPayoutAmount', parseFloat(e.target.value))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payoutSchedule">Payout Schedule</Label>
+                <Select
+                  value={(formData.vendorSettings as Record<string, string>)?.payoutSchedule || 'weekly'}
+                  onValueChange={(value) => handleNestedChange('vendorSettings', 'payoutSchedule', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Payment Settings */}
+        <TabsContent value="payment" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Gateway</CardTitle>
+              <CardDescription>Configure payment processing</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Enable Stripe</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Process payments via Stripe
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.paymentSettings as Record<string, boolean>)?.stripeEnabled ?? true}
+                  onCheckedChange={(checked) => handleNestedChange('paymentSettings', 'stripeEnabled', checked)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Test Mode</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Use Stripe test keys for development
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.paymentSettings as Record<string, boolean>)?.testMode ?? false}
+                  onCheckedChange={(checked) => handleNestedChange('paymentSettings', 'testMode', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Checkout Options</CardTitle>
+              <CardDescription>Configure checkout behavior</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Allow Guest Checkout</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Let customers checkout without an account
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.paymentSettings as Record<string, boolean>)?.guestCheckout ?? true}
+                  onCheckedChange={(checked) => handleNestedChange('paymentSettings', 'guestCheckout', checked)}
+                />
+              </div>
+              <Separator />
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="minOrder">Minimum Order Amount ($)</Label>
+                  <Input
+                    id="minOrder"
+                    type="number"
+                    min="0"
+                    value={(formData.paymentSettings as Record<string, number>)?.minOrderAmount || 0}
+                    onChange={(e) => handleNestedChange('paymentSettings', 'minOrderAmount', parseFloat(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="freeShipping">Free Shipping Threshold ($)</Label>
+                  <Input
+                    id="freeShipping"
+                    type="number"
+                    min="0"
+                    value={(formData.paymentSettings as Record<string, number>)?.freeShippingThreshold || 0}
+                    onChange={(e) => handleNestedChange('paymentSettings', 'freeShippingThreshold', parseFloat(e.target.value))}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Notification Settings */}
+        <TabsContent value="notifications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Notifications</CardTitle>
+              <CardDescription>Configure email alerts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>New Order Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Email admins when new orders are placed
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.notificationSettings as Record<string, boolean>)?.newOrderEmail ?? true}
+                  onCheckedChange={(checked) => handleNestedChange('notificationSettings', 'newOrderEmail', checked)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Vendor Application Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Email admins when vendors apply
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.notificationSettings as Record<string, boolean>)?.vendorApplicationEmail ?? true}
+                  onCheckedChange={(checked) => handleNestedChange('notificationSettings', 'vendorApplicationEmail', checked)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Low Stock Alerts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Notify when products are running low
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.notificationSettings as Record<string, boolean>)?.lowStockAlert ?? true}
+                  onCheckedChange={(checked) => handleNestedChange('notificationSettings', 'lowStockAlert', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Admin Broadcast</CardTitle>
+              <CardDescription>Send notifications to all users</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="broadcastTitle">Notification Title</Label>
+                <Input
+                  id="broadcastTitle"
+                  placeholder="Important announcement..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="broadcastMessage">Message</Label>
+                <Textarea
+                  id="broadcastMessage"
+                  placeholder="Enter your message..."
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Target Audience</Label>
+                <Select defaultValue="all">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="customers">Customers Only</SelectItem>
+                    <SelectItem value="vendors">Vendors Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="secondary">
+                <Mail className="h-4 w-4 mr-2" />
+                Send Broadcast
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Security Settings */}
+        <TabsContent value="security" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Authentication</CardTitle>
+              <CardDescription>Security and access settings</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Require Email Verification</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Users must verify email before accessing platform
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.securitySettings as Record<string, boolean>)?.requireEmailVerification ?? true}
+                  onCheckedChange={(checked) => handleNestedChange('securitySettings', 'requireEmailVerification', checked)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Two-Factor Authentication</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require 2FA for admin accounts
+                  </p>
+                </div>
+                <Switch
+                  checked={(formData.securitySettings as Record<string, boolean>)?.require2FA ?? false}
+                  onCheckedChange={(checked) => handleNestedChange('securitySettings', 'require2FA', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Session Settings</CardTitle>
+              <CardDescription>Control user sessions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                  <Input
+                    id="sessionTimeout"
+                    type="number"
+                    min="5"
+                    value={(formData.securitySettings as Record<string, number>)?.sessionTimeout || 60}
+                    onChange={(e) => handleNestedChange('securitySettings', 'sessionTimeout', parseInt(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxLoginAttempts">Max Login Attempts</Label>
+                  <Input
+                    id="maxLoginAttempts"
+                    type="number"
+                    min="1"
+                    value={(formData.securitySettings as Record<string, number>)?.maxLoginAttempts || 5}
+                    onChange={(e) => handleNestedChange('securitySettings', 'maxLoginAttempts', parseInt(e.target.value))}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-red-200">
+            <CardHeader>
+              <CardTitle className="text-red-600">Danger Zone</CardTitle>
+              <CardDescription>Irreversible actions</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    Reset All Settings
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset All Settings?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will reset all platform settings to their default values.
+                      This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction className="bg-red-600 hover:bg-red-700">
+                      Reset Settings
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
