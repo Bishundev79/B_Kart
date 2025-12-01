@@ -1,6 +1,12 @@
-import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { addToCartSchema } from '@/lib/validations/cart';
+import {
+  unauthorizedResponse,
+  serverErrorResponse,
+  validationErrorResponse,
+  successResponse,
+  notFoundResponse,
+} from '@/lib/utils/api-response';
 
 // Define types for Supabase query results
 interface ProductData {
@@ -32,9 +38,12 @@ export async function GET() {
     const supabase = await createClient();
     
     // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedResponse('Please sign in to view your cart');
     }
     
     // Fetch cart items with product and variant details
@@ -85,7 +94,7 @@ export async function GET() {
     
     if (error) {
       console.error('Error fetching cart:', error);
-      return NextResponse.json({ error: 'Failed to fetch cart' }, { status: 500 });
+      return serverErrorResponse('Failed to fetch cart items');
     }
     
     // Transform and filter out items with unavailable products
@@ -124,10 +133,10 @@ export async function GET() {
     summary.estimatedShipping = summary.subtotal >= 100 ? 0 : 9.99;
     summary.total = summary.subtotal + summary.estimatedTax + summary.estimatedShipping;
     
-    return NextResponse.json({ items: validItems, summary });
+    return successResponse({ items: validItems, summary });
   } catch (error) {
     console.error('Cart GET error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return serverErrorResponse();
   }
 }
 
@@ -139,7 +148,7 @@ export async function POST(request: Request) {
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedResponse('Please sign in to add items to cart');
     }
     
     // Parse and validate request body
@@ -147,9 +156,9 @@ export async function POST(request: Request) {
     const result = addToCartSchema.safeParse(body);
     
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.errors[0].message },
-        { status: 400 }
+      return validationErrorResponse(
+        result.error.errors[0].message,
+        result.error.errors
       );
     }
     
@@ -163,11 +172,11 @@ export async function POST(request: Request) {
       .single();
     
     if (productError || !product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+      return notFoundResponse('Product not found');
     }
     
     if (product.status !== 'active') {
-      return NextResponse.json({ error: 'Product is not available' }, { status: 400 });
+      return validationErrorResponse('Product is not available');
     }
     
     // Get price and check inventory
@@ -183,11 +192,11 @@ export async function POST(request: Request) {
         .single();
       
       if (variantError || !variant) {
-        return NextResponse.json({ error: 'Variant not found' }, { status: 404 });
+        return notFoundResponse('Variant not found');
       }
       
       if (!variant.is_active) {
-        return NextResponse.json({ error: 'Variant is not available' }, { status: 400 });
+        return validationErrorResponse('Variant is not available');
       }
       
       price = variant.price;
@@ -207,9 +216,8 @@ export async function POST(request: Request) {
     
     // Check inventory
     if (newQuantity > availableQuantity) {
-      return NextResponse.json(
-        { error: `Only ${availableQuantity} items available` },
-        { status: 400 }
+      return validationErrorResponse(
+        `Only ${availableQuantity} items available`
       );
     }
     
@@ -226,7 +234,7 @@ export async function POST(request: Request) {
       
       if (error) {
         console.error('Error updating cart item:', error);
-        return NextResponse.json({ error: 'Failed to update cart' }, { status: 500 });
+        return serverErrorResponse('Failed to update cart');
       }
       
       cartItem = data;
@@ -246,7 +254,7 @@ export async function POST(request: Request) {
       
       if (error) {
         console.error('Error creating cart item:', error);
-        return NextResponse.json({ error: 'Failed to add to cart' }, { status: 500 });
+        return serverErrorResponse('Failed to add to cart');
       }
       
       cartItem = data;
@@ -300,7 +308,7 @@ export async function POST(request: Request) {
     
     if (fetchError) {
       console.error('Error fetching cart item:', fetchError);
-      return NextResponse.json({ error: 'Failed to fetch cart item' }, { status: 500 });
+      return serverErrorResponse('Failed to fetch cart item');
     }
     
     // Transform response
@@ -319,13 +327,13 @@ export async function POST(request: Request) {
       } : null,
     };
     
-    return NextResponse.json({
-      item: responseItem,
-      message: existingItem ? 'Cart updated' : 'Item added to cart',
-    });
+    return successResponse(
+      { item: responseItem },
+      existingItem ? 'Cart updated' : 'Item added to cart'
+    );
   } catch (error) {
     console.error('Cart POST error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return serverErrorResponse();
   }
 }
 
@@ -335,9 +343,12 @@ export async function DELETE() {
     const supabase = await createClient();
     
     // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedResponse('Please sign in to manage your cart');
     }
     
     // Delete all cart items for user
@@ -348,12 +359,12 @@ export async function DELETE() {
     
     if (error) {
       console.error('Error clearing cart:', error);
-      return NextResponse.json({ error: 'Failed to clear cart' }, { status: 500 });
+      return serverErrorResponse('Failed to clear cart');
     }
     
-    return NextResponse.json({ message: 'Cart cleared' });
+    return successResponse(undefined, 'Cart cleared');
   } catch (error) {
     console.error('Cart DELETE error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return serverErrorResponse();
   }
 }

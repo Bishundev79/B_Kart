@@ -75,7 +75,11 @@ export interface AuthActions {
   initialize: () => Promise<void>;
   signIn: (credentials: LoginCredentials) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
-  signUp: (credentials: SignupCredentials) => Promise<{ error: string | null }>;
+  signUp: (credentials: SignupCredentials) => Promise<{ 
+    error: string | null;
+    requiresConfirmation?: boolean;
+    redirectTo?: string;
+  }>;
   signOut: () => Promise<void>;
   updateProfile: (data: ProfileUpdateData) => Promise<{ error: string | null }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;

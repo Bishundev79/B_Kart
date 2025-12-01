@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createOrderSchema } from '@/lib/validations/checkout';
 import { SHIPPING_METHODS } from '@/types/checkout';
+import {
+  successResponse,
+  validationErrorResponse,
+  unauthorizedResponse,
+  serverErrorResponse,
+  errorResponse,
+} from '@/lib/utils/api-response';
 
 // Helper to generate order number
 function generateOrderNumber(): string {
@@ -14,56 +20,68 @@ function generateOrderNumber(): string {
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedResponse();
     }
-    
-    // Parse and validate request body
+
     const body = await request.json();
     const result = createOrderSchema.safeParse(body);
-    
+
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.errors[0].message },
-        { status: 400 }
+      return validationErrorResponse(
+        result.error.errors[0]?.message || 'Invalid checkout data',
+        result.error.errors
       );
     }
-    
-    const { shippingAddressId, billingAddressId, shippingMethodId, paymentIntentId, notes } = result.data;
-    
-    // Get shipping method
+
+    const {
+      shippingAddressId,
+      billingAddressId,
+      shippingMethodId,
+      paymentIntentId,
+      notes,
+    } = result.data;
+
     const shippingMethod = SHIPPING_METHODS.find(m => m.id === shippingMethodId);
     if (!shippingMethod) {
-      return NextResponse.json({ error: 'Invalid shipping method' }, { status: 400 });
+      return validationErrorResponse('Invalid shipping method');
     }
-    
-    // Verify addresses belong to user
-    const { data: shippingAddress } = await supabase
+
+    const { data: shippingAddress, error: shippingAddressError } = await supabase
       .from('addresses')
       .select('*')
       .eq('id', shippingAddressId)
       .eq('user_id', user.id)
       .single();
-    
-    if (!shippingAddress) {
-      return NextResponse.json({ error: 'Invalid shipping address' }, { status: 400 });
+
+    if (shippingAddressError) {
+      return serverErrorResponse('Failed to verify shipping address');
     }
-    
-    const { data: billingAddress } = await supabase
+
+    if (!shippingAddress) {
+      return validationErrorResponse('Invalid shipping address');
+    }
+
+    const { data: billingAddress, error: billingAddressError } = await supabase
       .from('addresses')
       .select('*')
       .eq('id', billingAddressId)
       .eq('user_id', user.id)
       .single();
-    
-    if (!billingAddress) {
-      return NextResponse.json({ error: 'Invalid billing address' }, { status: 400 });
+
+    if (billingAddressError) {
+      return serverErrorResponse('Failed to verify billing address');
     }
-    
-    // Get cart items with product details
+
+    if (!billingAddress) {
+      return validationErrorResponse('Invalid billing address');
+    }
+
     const { data: cartItems, error: cartError } = await supabase
       .from('cart_items')
       .select(`
@@ -94,8 +112,12 @@ export async function POST(request: Request) {
       `)
       .eq('user_id', user.id);
     
-    if (cartError || !cartItems || cartItems.length === 0) {
-      return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+    if (cartError) {
+      return serverErrorResponse('Failed to load cart');
+    }
+
+    if (!cartItems || cartItems.length === 0) {
+      return validationErrorResponse('Cart is empty');
     }
     
     // Validate all items are available and calculate totals
@@ -125,10 +147,9 @@ export async function POST(request: Request) {
       };
       
       if (!product || product.status !== 'active') {
-        return NextResponse.json(
-          { error: `Product is no longer available` },
-          { status: 400 }
-        );
+        return validationErrorResponse('Product is no longer available', {
+          productId: product?.id,
+        });
       }
       
       let price = product.price;
@@ -145,10 +166,10 @@ export async function POST(request: Request) {
         };
         
         if (!variant || !variant.is_active) {
-          return NextResponse.json(
-            { error: `Product variant is no longer available` },
-            { status: 400 }
-          );
+          return validationErrorResponse('Product variant is no longer available', {
+            productId: product.id,
+            variantId: item.variant_id,
+          });
         }
         
         price = variant.price;
@@ -157,10 +178,10 @@ export async function POST(request: Request) {
       }
       
       if (item.quantity > availableQuantity) {
-        return NextResponse.json(
-          { error: `Insufficient stock for ${product.name}` },
-          { status: 400 }
-        );
+        return validationErrorResponse(`Insufficient stock for ${product.name}`, {
+          productId: product.id,
+          available: availableQuantity,
+        });
       }
       
       const itemSubtotal = price * item.quantity;
@@ -211,11 +232,13 @@ export async function POST(request: Request) {
       })
       .select()
       .single();
-    
+
     if (orderError || !order) {
       console.error('Error creating order:', orderError);
-      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
+      return serverErrorResponse('Failed to create order');
     }
+
+    const createdOrderId = order.id;
     
     // Create order items
     const orderItemsToInsert = orderItems.map(item => ({
@@ -226,12 +249,11 @@ export async function POST(request: Request) {
     const { error: itemsError } = await supabase
       .from('order_items')
       .insert(orderItemsToInsert);
-    
+
     if (itemsError) {
       console.error('Error creating order items:', itemsError);
-      // Rollback order
-      await supabase.from('orders').delete().eq('id', order.id);
-      return NextResponse.json({ error: 'Failed to create order items' }, { status: 500 });
+      await supabase.from('orders').delete().eq('id', createdOrderId);
+      return serverErrorResponse('Failed to create order items');
     }
     
     // Create payment record
@@ -248,25 +270,38 @@ export async function POST(request: Request) {
     
     if (paymentError) {
       console.error('Error creating payment record:', paymentError);
+      await Promise.all([
+        supabase.from('order_items').delete().eq('order_id', createdOrderId),
+        supabase.from('orders').delete().eq('id', createdOrderId),
+      ]);
+      return serverErrorResponse('Failed to create payment record');
     }
     
     // Inventory is automatically updated via database triggers
     // when order_items are inserted
     
     // Clear cart
-    await supabase
+    const { error: cartClearError } = await supabase
       .from('cart_items')
       .delete()
       .eq('user_id', user.id);
-    
-    return NextResponse.json({
-      orderId: order.id,
-      orderNumber: order.order_number,
-      total: order.total,
-      message: 'Order created successfully',
-    });
+
+    if (cartClearError) {
+      console.error('Error clearing cart:', cartClearError);
+      return errorResponse('Order created but failed to clear cart', 202);
+    }
+
+    return successResponse(
+      {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        total: order.total,
+      },
+      'Order created successfully',
+      201
+    );
   } catch (error) {
     console.error('Checkout error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return serverErrorResponse();
   }
 }

@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Metadata } from 'next';
+import { Header, Footer, Breadcrumb } from '@/components/layout';
 import {
   ProductGrid,
   ProductSearch,
@@ -7,6 +8,7 @@ import {
   ProductSort,
 } from '@/components/product';
 import { ProductGridSkeleton } from '@/components/loading/ProductSkeleton';
+import { Package } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Products | B_Kart',
@@ -29,39 +31,60 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const params = await searchParams;
 
   return (
-    <div className="container py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Products</h1>
-        <p className="text-muted-foreground">
-          Browse our wide selection of products from multiple vendors.
-        </p>
-      </div>
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      
+      <main className="flex-1">
+        {/* Hero Banner */}
+        <section className="relative bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 py-12 md:py-16">
+          <div className="absolute inset-0 bg-gradient-mesh opacity-30" />
+          <div className="container relative">
+            <Breadcrumb className="mb-6" />
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-secondary/20">
+                <Package className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight">All Products</h1>
+                <p className="mt-2 text-lg text-muted-foreground">
+                  Discover amazing products from verified vendors worldwide
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      {/* Search and Sort Bar */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="w-full sm:max-w-md">
-          <ProductSearch />
+        <div className="container py-8">
+          {/* Search and Sort Bar */}
+          <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between p-6 rounded-xl border-2 bg-card">
+            <div className="w-full lg:max-w-md">
+              <ProductSearch />
+            </div>
+            <div className="flex items-center gap-4">
+              <ProductSort />
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex flex-col gap-8 lg:flex-row">
+            {/* Sidebar Filters */}
+            <aside className="w-full lg:w-80 lg:shrink-0">
+              <div className="sticky top-24">
+                <ProductFilters />
+              </div>
+            </aside>
+
+            {/* Product Grid */}
+            <main className="flex-1">
+              <Suspense fallback={<ProductGridSkeleton />}>
+                <ProductGridWrapper searchParams={params} />
+              </Suspense>
+            </main>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <ProductSort />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex flex-col gap-8 lg:flex-row">
-        {/* Sidebar Filters */}
-        <aside className="w-full lg:w-72 lg:shrink-0">
-          <ProductFilters />
-        </aside>
-
-        {/* Product Grid */}
-        <main className="flex-1">
-          <Suspense fallback={<ProductGridSkeleton />}>
-            <ProductGridWrapper searchParams={params} />
-          </Suspense>
-        </main>
-      </div>
+      </main>
+      
+      <Footer />
     </div>
   );
 }

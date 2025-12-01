@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
-import { X, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -12,11 +11,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useCartStore } from '@/stores/cartStore';
+import { useCartStore, useCartInitialized } from '@/stores/cartStore';
 import { CartItem } from './CartItem';
 import { CartEmpty } from './CartEmpty';
 import { CartSummary } from './CartSummary';
 import { useIsAuthenticated } from '@/stores/authStore';
+import { useCartNotifications } from '@/hooks/use-cart-notifications';
 
 export function CartSheet() {
   const { 
@@ -27,21 +27,22 @@ export function CartSheet() {
     closeCart, 
     fetchCart, 
     getSummary,
-    clearCart 
+    clearCart,
+    clearError
   } = useCartStore();
   const isAuthenticated = useIsAuthenticated();
-  
-  // Fetch cart on open if authenticated
-  useEffect(() => {
-    if (isOpen && isAuthenticated) {
-      fetchCart();
-    }
-  }, [isOpen, isAuthenticated, fetchCart]);
+  const cartInitialized = useCartInitialized();
+  useCartNotifications();
   
   const summary = getSummary();
   
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
+    <Sheet open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        closeCart();
+        clearError();
+      }
+    }}>
       <SheetContent className="flex flex-col w-full sm:max-w-lg">
         <SheetHeader className="space-y-2.5 pr-6">
           <SheetTitle className="flex items-center justify-between">
@@ -59,7 +60,7 @@ export function CartSheet() {
           </SheetTitle>
         </SheetHeader>
         
-        {isLoading ? (
+        {!cartInitialized || isLoading ? (
           <div className="flex flex-1 items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { CartStore, CartItemDisplay, CartSummary, AddToCartInput } from '@/types/cart';
 import type { Coupon } from '@/types/coupon';
 
@@ -12,8 +11,12 @@ const FLAT_SHIPPING_RATE = 9.99;
 
 interface CartState extends CartStore {
   coupon: Coupon | null;
+  initialized: boolean;
+  lastSyncTime: number | null;
   applyCoupon: (code: string) => Promise<void>;
   removeCoupon: () => void;
+  syncWithServer: () => Promise<void>;
+  clearError: () => void;
 }
 
 const initialState = {
@@ -23,12 +26,12 @@ const initialState = {
   isUpdating: false,
   error: null as string | null,
   isOpen: false,
+  initialized: false,
+  lastSyncTime: null as number | null,
 };
 
-export const useCartStore = create<CartState>()(
-  persist(
-    (set, get) => ({
-      ...initialState,
+export const useCartStore = create<CartState>()((set, get) => ({
+  ...initialState,
 
       // ========================================
       // COUPON OPERATIONS
@@ -61,29 +64,57 @@ export const useCartStore = create<CartState>()(
         }
       },
 
-      removeCoupon: () => {
-        set({ coupon: null });
-      },
+  removeCoupon: () => {
+    set({ coupon: null });
+  },
 
-      // ========================================
-      // DATA FETCHING
-      // ========================================
-      fetchCart: async () => {
-        set({ isLoading: true, error: null });
-        
-        try {
-          const response = await fetch('/api/cart');
-          
-          if (!response.ok) {
-            if (response.status === 401) {
-              // User not authenticated, clear cart
-              set({ items: [], isLoading: false });
-              return;
-            }
-            throw new Error('Failed to fetch cart');
-          }
-          
-          const data = await response.json();
+  // Clear error state
+  clearError: () => {
+    set({ error: null });
+  },
+
+  // Sync cart with server (called after auth state changes)
+  syncWithServer: async () => {
+    const now = Date.now();
+    const { lastSyncTime, isLoading } = get();
+    
+    // Prevent duplicate syncs within 1 second
+    if (lastSyncTime && now - lastSyncTime < 1000) {
+      return;
+    }
+    
+    // Don't sync if already loading
+    if (isLoading) {
+      return;
+    }
+
+    try {
+      set({ lastSyncTime: now });
+      await get().fetchCart();
+    } catch (error) {
+      console.error('Cart sync error:', error);
+    }
+  },
+
+  // ========================================
+  // DATA FETCHING
+  // ========================================
+  fetchCart: async () => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await fetch('/api/cart');
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          // User not authenticated, clear cart
+          set({ items: [], isLoading: false, initialized: true });
+          return;
+        }
+        throw new Error('Failed to fetch cart');
+      }
+      
+      const data = await response.json();
           
           // Transform API response to CartItemDisplay
           const items: CartItemDisplay[] = data.items.map((item: {
@@ -119,20 +150,19 @@ export const useCartStore = create<CartState>()(
             quantity: item.quantity,
             maxQuantity: item.variant?.quantity || item.product.quantity,
             imageUrl: item.product.images.find((img) => img.is_primary)?.url || item.product.images[0]?.url || null,
-            vendorName: item.product.vendor?.store_name || null,
-            vendorSlug: item.product.vendor?.store_slug || null,
-          }));
-          
-          set({ items, isLoading: false });
-        } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : 'Failed to fetch cart',
-            isLoading: false 
-          });
-        }
-      },
-
-      // ========================================
+        vendorName: item.product.vendor?.store_name || null,
+        vendorSlug: item.product.vendor?.store_slug || null,
+      }));
+      
+      set({ items, isLoading: false, initialized: true });
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to fetch cart',
+        isLoading: false,
+        initialized: true
+      });
+    }
+  },      // ========================================
       // CART OPERATIONS
       // ========================================
       addItem: async (input: AddToCartInput) => {
@@ -145,12 +175,11 @@ export const useCartStore = create<CartState>()(
             body: JSON.stringify(input),
           });
           
+          const data = await response.json();
+          
           if (!response.ok) {
-            const data = await response.json();
             throw new Error(data.error || 'Failed to add item to cart');
           }
-          
-          const data = await response.json();
           
           // Check if item already exists in cart
           const existingIndex = get().items.findIndex(
@@ -346,19 +375,10 @@ export const useCartStore = create<CartState>()(
           estimatedTax,
           estimatedShipping,
           discount,
-          total,
-        };
-      },
-    }),
-    {
-      name: 'cart-storage',
-      partialize: (state) => ({ 
-        items: state.items,
-        coupon: state.coupon 
-      }),
-    }
-  )
-);
+      total,
+    };
+  },
+}));
 
 // Selector hooks for common use cases
 export const useCartItems = () => useCartStore((state) => state.items);
@@ -366,6 +386,7 @@ export const useCartIsOpen = () => useCartStore((state) => state.isOpen);
 export const useCartIsLoading = () => useCartStore((state) => state.isLoading);
 export const useCartIsUpdating = () => useCartStore((state) => state.isUpdating);
 export const useCartError = () => useCartStore((state) => state.error);
+export const useCartInitialized = () => useCartStore((state) => state.initialized);
 export const useCartItemCount = () => useCartStore((state) => 
   state.items.reduce((total, item) => total + item.quantity, 0)
 );

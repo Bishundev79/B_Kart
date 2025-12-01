@@ -63,7 +63,15 @@ export function SignupForm() {
     });
 
     if (!result.error) {
-      setSuccess(true);
+      if (result.requiresConfirmation) {
+        setSuccess(true);
+      } else if (result.redirectTo) {
+        // Redirect based on role
+        router.push(result.redirectTo);
+      } else {
+        // Default redirect to home
+        router.push('/');
+      }
     }
   };
 
