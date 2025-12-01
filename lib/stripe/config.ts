@@ -3,14 +3,38 @@ import Stripe from 'stripe';
 // Server-side Stripe instance
 // Only use this in API routes and server components
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
+// Create a lazy-initialized Stripe client
+let stripeClient: Stripe | null = null;
+
+function getStripeClient(): Stripe {
+  if (!stripeClient) {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
+    }
+    stripeClient = new Stripe(secretKey, {
+      apiVersion: '2025-11-17.clover',
+      typescript: true,
+    });
+  }
+  return stripeClient;
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-11-17.clover',
-  typescript: true,
-});
+// Export a getter for stripe to ensure lazy initialization
+export const stripe = {
+  get paymentIntents() {
+    return getStripeClient().paymentIntents;
+  },
+  get customers() {
+    return getStripeClient().customers;
+  },
+  get checkout() {
+    return getStripeClient().checkout;
+  },
+  get webhooks() {
+    return getStripeClient().webhooks;
+  },
+};
 
 // Helper to format amount for Stripe (converts dollars to cents)
 export function formatAmountForStripe(amount: number, currency: string = 'USD'): number {

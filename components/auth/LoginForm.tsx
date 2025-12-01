@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -28,9 +28,16 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirectTo') || '/';
   const errorParam = searchParams.get('error');
+  const errorMessage = searchParams.get('message');
 
   const [showPassword, setShowPassword] = useState(false);
   const { signIn, loading, error, clearError } = useAuthStore();
+
+  // Clear any URL error params when the component mounts or when user interacts
+  useEffect(() => {
+    // Clear store error on mount
+    clearError();
+  }, [clearError]);
 
   const {
     register,
@@ -46,13 +53,44 @@ export function LoginForm() {
 
   const onSubmit = async (data: LoginFormData) => {
     clearError();
+    console.log('[LoginForm] Attempting sign in for:', data.email);
+    
     const result = await signIn(data);
 
     if (!result.error) {
+      console.log('[LoginForm] Sign in successful, redirecting to:', redirectTo);
       router.push(redirectTo);
       router.refresh();
+    } else {
+      console.error('[LoginForm] Sign in failed:', result.error);
     }
   };
+
+  // Get error message to display (prioritize store error over URL error)
+  const getDisplayError = () => {
+    if (error) {
+      return error;
+    }
+    if (errorParam && errorMessage) {
+      return decodeURIComponent(errorMessage);
+    }
+    if (errorParam) {
+      // Fallback messages for error types without messages
+      switch (errorParam) {
+        case 'session_exchange_failed':
+          return 'Authentication session failed. Please try again.';
+        case 'profile_creation_failed':
+          return 'Account setup failed. Please try signing in again.';
+        case 'no_session_user':
+          return 'No user session created. Please try again.';
+        default:
+          return 'Authentication failed. Please try again.';
+      }
+    }
+    return null;
+  };
+
+  const displayError = getDisplayError();
 
   return (
     <Card>
@@ -77,11 +115,9 @@ export function LoginForm() {
           </div>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {(error || errorParam) && (
+          {displayError && (
             <Alert variant="destructive">
-              <AlertDescription>
-                {error || 'Authentication failed. Please try again.'}
-              </AlertDescription>
+              <AlertDescription>{displayError}</AlertDescription>
             </Alert>
           )}
 

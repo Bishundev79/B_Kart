@@ -25,20 +25,31 @@ export function GoogleSignInButton() {
     }
   };
 
-  // Decode error messages
+  // Decode error messages with more specific handling
   const getErrorMessage = () => {
-    if (error === 'oauth_provider_error') {
-      return errorMessage || 'Failed to sign in with Google. Please try again.';
-    } else if (error === 'session_exchange_failed') {
-      return 'Authentication failed. Please try again.';
-    } else if (error === 'profile_creation_failed') {
-      return 'Account created but profile setup failed. Please contact support.';
-    } else if (error === 'oauth_callback_failed') {
-      return errorMessage || 'Authentication callback failed. Please try again.';
-    } else if (errorMessage) {
-      return decodeURIComponent(errorMessage);
+    const decodedMessage = errorMessage ? decodeURIComponent(errorMessage) : '';
+    
+    switch (error) {
+      case 'oauth_provider_error':
+        return decodedMessage || 'Failed to sign in with Google. Please try again.';
+      case 'session_exchange_failed':
+        return decodedMessage || 'Authentication session failed. Please try again.';
+      case 'profile_creation_failed':
+        return decodedMessage || 'Account created but profile setup failed. Please try signing in again.';
+      case 'oauth_callback_failed':
+        return decodedMessage || 'Authentication callback failed. Please try again.';
+      case 'no_session_user':
+        return decodedMessage || 'No user session created. Please try signing in again.';
+      case 'missing_code':
+        return decodedMessage || 'Authentication was cancelled or failed. Please try again.';
+      case 'configuration_error':
+        return decodedMessage || 'Server configuration error. Please contact support.';
+      default:
+        if (decodedMessage) {
+          return decodedMessage;
+        }
+        return 'An error occurred during sign in. Please try again.';
     }
-    return 'An error occurred during sign in. Please try again.';
   };
 
   return (
