@@ -74,6 +74,7 @@ export interface AuthState {
 export interface AuthActions {
   initialize: () => Promise<void>;
   signIn: (credentials: LoginCredentials) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signUp: (credentials: SignupCredentials) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   updateProfile: (data: ProfileUpdateData) => Promise<{ error: string | null }>;

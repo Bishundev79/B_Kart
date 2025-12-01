@@ -152,6 +152,34 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
+      // Sign in with Google
+      signInWithGoogle: async () => {
+        const supabase = createClient();
+
+        try {
+          set({ loading: true, error: null });
+
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}/api/auth/callback`,
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent',
+              },
+            },
+          });
+
+          if (error) throw error;
+
+          return { error: null };
+        } catch (error: any) {
+          const errorMessage = error?.message || 'Failed to sign in with Google';
+          set({ loading: false, error: errorMessage });
+          return { error: errorMessage };
+        }
+      },
+
       // Sign up with email and password
       signUp: async (credentials: SignupCredentials) => {
         const supabase = createClient();

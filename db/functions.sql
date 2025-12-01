@@ -8,12 +8,28 @@
 -- Function to create profile when user signs up
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  full_name_val TEXT;
+  avatar_url_val TEXT;
 BEGIN
+  -- Try to get data from different metadata keys (Google uses 'name' and 'picture')
+  full_name_val := COALESCE(
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'name',
+    ''
+  );
+  
+  avatar_url_val := COALESCE(
+    NEW.raw_user_meta_data->>'avatar_url',
+    NEW.raw_user_meta_data->>'picture',
+    ''
+  );
+
   INSERT INTO public.profiles (id, full_name, avatar_url, role)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_url', ''),
+    full_name_val,
+    avatar_url_val,
     COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'customer')
   );
   RETURN NEW;

@@ -23,6 +23,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signupSchema, type SignupFormData } from '@/lib/validations/auth';
 import { useAuthStore } from '@/stores/authStore';
 import { RoleSelector } from './RoleSelector';
+import { GoogleSignInButton } from './GoogleSignInButton';
 
 export function SignupForm() {
   const router = useRouter();
@@ -103,6 +104,19 @@ export function SignupForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="grid gap-4 mb-4">
+          <GoogleSignInButton />
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or sign up with
+              </span>
+            </div>
+          </div>
+        </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {error && (
             <Alert variant="destructive">
