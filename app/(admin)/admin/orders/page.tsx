@@ -372,7 +372,7 @@ export default function AdminOrdersPage() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Payment</Label>
-                  <Badge variant={selectedOrder.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                  <Badge variant={selectedOrder.paymentStatus === 'completed' ? 'default' : 'secondary'}>
                     {selectedOrder.paymentStatus}
                   </Badge>
                 </div>

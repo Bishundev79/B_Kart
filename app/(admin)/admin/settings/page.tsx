@@ -46,13 +46,13 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { PlatformSettings } from '@/types/admin';
+import type { PlatformSettingsData } from '@/types/admin';
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
   const { settings, settingsLoading, fetchSettings, updateSettings } = useAdminStore();
   
-  const [formData, setFormData] = useState<Partial<PlatformSettings>>({});
+  const [formData, setFormData] = useState<Partial<PlatformSettingsData>>({});
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -75,7 +75,7 @@ export default function AdminSettingsPage() {
     setFormData((prev) => ({
       ...prev,
       [parent]: {
-        ...(prev[parent as keyof PlatformSettings] as Record<string, unknown> || {}),
+        ...(((prev[parent as keyof PlatformSettingsData] as Record<string, unknown>) || {})),
         [key]: value,
       },
     }));
@@ -85,7 +85,7 @@ export default function AdminSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateSettings(formData as PlatformSettings);
+      await updateSettings(formData);
       toast({
         title: 'Settings saved',
         description: 'Platform settings have been updated successfully',
@@ -310,8 +310,10 @@ export default function AdminSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={(formData.vendorSettings as Record<string, boolean>)?.allowRegistration ?? true}
-                  onCheckedChange={(checked) => handleNestedChange('vendorSettings', 'allowRegistration', checked)}
+                  checked={formData.vendorSettings?.allowRegistration ?? true}
+                  onCheckedChange={(checked) =>
+                    handleNestedChange('vendorSettings', 'allowRegistration', checked)
+                  }
                 />
               </div>
               <Separator />
@@ -323,330 +325,12 @@ export default function AdminSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={(formData.vendorSettings as Record<string, boolean>)?.requireApproval ?? true}
-                  onCheckedChange={(checked) => handleNestedChange('vendorSettings', 'requireApproval', checked)}
+                  checked={formData.vendorSettings?.requireApproval ?? true}
+                  onCheckedChange={(checked) =>
+                    handleNestedChange('vendorSettings', 'requireApproval', checked)
+                  }
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Commission Settings</CardTitle>
-              <CardDescription>Platform commission rates</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="defaultCommission">Default Commission Rate (%)</Label>
-                  <Input
-                    id="defaultCommission"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={(formData.vendorSettings as Record<string, number>)?.defaultCommission || 10}
-                    onChange={(e) => handleNestedChange('vendorSettings', 'defaultCommission', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="minPayout">Minimum Payout Amount ($)</Label>
-                  <Input
-                    id="minPayout"
-                    type="number"
-                    min="0"
-                    value={(formData.vendorSettings as Record<string, number>)?.minPayoutAmount || 50}
-                    onChange={(e) => handleNestedChange('vendorSettings', 'minPayoutAmount', parseFloat(e.target.value))}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="payoutSchedule">Payout Schedule</Label>
-                <Select
-                  value={(formData.vendorSettings as Record<string, string>)?.payoutSchedule || 'weekly'}
-                  onValueChange={(value) => handleNestedChange('vendorSettings', 'payoutSchedule', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Payment Settings */}
-        <TabsContent value="payment" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Gateway</CardTitle>
-              <CardDescription>Configure payment processing</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Enable Stripe</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Process payments via Stripe
-                  </p>
-                </div>
-                <Switch
-                  checked={(formData.paymentSettings as Record<string, boolean>)?.stripeEnabled ?? true}
-                  onCheckedChange={(checked) => handleNestedChange('paymentSettings', 'stripeEnabled', checked)}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Test Mode</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Use Stripe test keys for development
-                  </p>
-                </div>
-                <Switch
-                  checked={(formData.paymentSettings as Record<string, boolean>)?.testMode ?? false}
-                  onCheckedChange={(checked) => handleNestedChange('paymentSettings', 'testMode', checked)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Checkout Options</CardTitle>
-              <CardDescription>Configure checkout behavior</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Allow Guest Checkout</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Let customers checkout without an account
-                  </p>
-                </div>
-                <Switch
-                  checked={(formData.paymentSettings as Record<string, boolean>)?.guestCheckout ?? true}
-                  onCheckedChange={(checked) => handleNestedChange('paymentSettings', 'guestCheckout', checked)}
-                />
-              </div>
-              <Separator />
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="minOrder">Minimum Order Amount ($)</Label>
-                  <Input
-                    id="minOrder"
-                    type="number"
-                    min="0"
-                    value={(formData.paymentSettings as Record<string, number>)?.minOrderAmount || 0}
-                    onChange={(e) => handleNestedChange('paymentSettings', 'minOrderAmount', parseFloat(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="freeShipping">Free Shipping Threshold ($)</Label>
-                  <Input
-                    id="freeShipping"
-                    type="number"
-                    min="0"
-                    value={(formData.paymentSettings as Record<string, number>)?.freeShippingThreshold || 0}
-                    onChange={(e) => handleNestedChange('paymentSettings', 'freeShippingThreshold', parseFloat(e.target.value))}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notification Settings */}
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Notifications</CardTitle>
-              <CardDescription>Configure email alerts</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>New Order Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Email admins when new orders are placed
-                  </p>
-                </div>
-                <Switch
-                  checked={(formData.notificationSettings as Record<string, boolean>)?.newOrderEmail ?? true}
-                  onCheckedChange={(checked) => handleNestedChange('notificationSettings', 'newOrderEmail', checked)}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Vendor Application Notifications</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Email admins when vendors apply
-                  </p>
-                </div>
-                <Switch
-                  checked={(formData.notificationSettings as Record<string, boolean>)?.vendorApplicationEmail ?? true}
-                  onCheckedChange={(checked) => handleNestedChange('notificationSettings', 'vendorApplicationEmail', checked)}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Low Stock Alerts</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Notify when products are running low
-                  </p>
-                </div>
-                <Switch
-                  checked={(formData.notificationSettings as Record<string, boolean>)?.lowStockAlert ?? true}
-                  onCheckedChange={(checked) => handleNestedChange('notificationSettings', 'lowStockAlert', checked)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Admin Broadcast</CardTitle>
-              <CardDescription>Send notifications to all users</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="broadcastTitle">Notification Title</Label>
-                <Input
-                  id="broadcastTitle"
-                  placeholder="Important announcement..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="broadcastMessage">Message</Label>
-                <Textarea
-                  id="broadcastMessage"
-                  placeholder="Enter your message..."
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Target Audience</Label>
-                <Select defaultValue="all">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
-                    <SelectItem value="customers">Customers Only</SelectItem>
-                    <SelectItem value="vendors">Vendors Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button variant="secondary">
-                <Mail className="h-4 w-4 mr-2" />
-                Send Broadcast
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security Settings */}
-        <TabsContent value="security" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Authentication</CardTitle>
-              <CardDescription>Security and access settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Require Email Verification</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Users must verify email before accessing platform
-                  </p>
-                </div>
-                <Switch
-                  checked={(formData.securitySettings as Record<string, boolean>)?.requireEmailVerification ?? true}
-                  onCheckedChange={(checked) => handleNestedChange('securitySettings', 'requireEmailVerification', checked)}
-                />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Two-Factor Authentication</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Require 2FA for admin accounts
-                  </p>
-                </div>
-                <Switch
-                  checked={(formData.securitySettings as Record<string, boolean>)?.require2FA ?? false}
-                  onCheckedChange={(checked) => handleNestedChange('securitySettings', 'require2FA', checked)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Session Settings</CardTitle>
-              <CardDescription>Control user sessions</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
-                  <Input
-                    id="sessionTimeout"
-                    type="number"
-                    min="5"
-                    value={(formData.securitySettings as Record<string, number>)?.sessionTimeout || 60}
-                    onChange={(e) => handleNestedChange('securitySettings', 'sessionTimeout', parseInt(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxLoginAttempts">Max Login Attempts</Label>
-                  <Input
-                    id="maxLoginAttempts"
-                    type="number"
-                    min="1"
-                    value={(formData.securitySettings as Record<string, number>)?.maxLoginAttempts || 5}
-                    onChange={(e) => handleNestedChange('securitySettings', 'maxLoginAttempts', parseInt(e.target.value))}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-red-200">
-            <CardHeader>
-              <CardTitle className="text-red-600">Danger Zone</CardTitle>
-              <CardDescription>Irreversible actions</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive">
-                    Reset All Settings
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Reset All Settings?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will reset all platform settings to their default values.
-                      This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction className="bg-red-600 hover:bg-red-700">
-                      Reset Settings
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
             </CardContent>
           </Card>
         </TabsContent>

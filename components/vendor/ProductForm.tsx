@@ -53,6 +53,18 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
   const isEditing = !!product;
   const schema = isEditing ? updateProductSchema : createProductSchema;
 
+  const allowedStatuses: CreateProductData['status'][] = [
+    'draft',
+    'active',
+    'inactive',
+    'out_of_stock',
+  ];
+
+  const initialStatus: CreateProductData['status'] =
+    product && allowedStatuses.includes(product.status as CreateProductData['status'])
+      ? (product.status as CreateProductData['status'])
+      : 'draft';
+
   const form = useForm<CreateProductData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -70,7 +82,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       low_stock_threshold: product?.low_stock_threshold ?? 10,
       weight: product?.weight ?? undefined,
       weight_unit: (product?.weight_unit as 'kg' | 'g' | 'lb' | 'oz') || 'kg',
-      status: product?.status || 'draft',
+      status: initialStatus,
       is_featured: product?.is_featured ?? false,
       is_digital: product?.is_digital ?? false,
       meta_title: product?.meta_title ?? '',

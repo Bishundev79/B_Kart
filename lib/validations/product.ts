@@ -71,7 +71,7 @@ export const createProductSchema = z.object({
     .optional()
     .nullable(),
   
-  inventory_quantity: z
+  quantity: z
     .number()
     .int('Inventory must be a whole number')
     .min(0, 'Inventory cannot be negative')
@@ -179,7 +179,7 @@ export const createProductVariantSchema = z.object({
     .optional()
     .nullable(),
   
-  inventory_quantity: z
+  quantity: z
     .number()
     .int('Inventory must be a whole number')
     .min(0, 'Inventory cannot be negative')

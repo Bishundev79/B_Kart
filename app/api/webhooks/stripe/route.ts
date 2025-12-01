@@ -41,7 +41,6 @@ export async function POST(request: Request) {
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log('Payment succeeded:', paymentIntent.id);
         
         // Update payment record
         const { error: paymentError } = await supabase
@@ -113,7 +112,6 @@ export async function POST(request: Request) {
       
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log('Payment failed:', paymentIntent.id);
         
         const failureMessage = paymentIntent.last_payment_error?.message || 'Payment failed';
         
@@ -173,7 +171,6 @@ export async function POST(request: Request) {
       
       case 'charge.refunded': {
         const charge = event.data.object as Stripe.Charge;
-        console.log('Charge refunded:', charge.id);
         
         if (charge.payment_intent) {
           const paymentIntentId = typeof charge.payment_intent === 'string' 
@@ -221,7 +218,6 @@ export async function POST(request: Request) {
       }
       
       default:
-        console.log(`Unhandled event type: ${event.type}`);
     }
     
     return NextResponse.json({ received: true });

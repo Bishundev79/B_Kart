@@ -6,11 +6,61 @@ import type { PlatformSettingsData } from '@/types/admin';
 
 // Default settings
 const defaultSettings: PlatformSettingsData = {
+  // General Settings
+  platformName: 'B_Kart',
+  platformDescription: '',
+  supportEmail: '',
+  currency: 'USD',
+  timezone: 'UTC',
+  maintenanceMode: false,
+  maintenanceMessage: '',
+
+  // Vendor Settings
+  vendorSettings: {
+    allowRegistration: true,
+    requireApproval: true,
+    defaultCommission: 15,
+    minPayoutAmount: 50,
+    payoutSchedule: 'monthly',
+  },
+
+  // Payment Settings
+  paymentSettings: {
+    stripeEnabled: true,
+    testMode: true,
+    guestCheckout: true,
+    taxEnabled: false,
+    taxRate: 0,
+    minOrderAmount: 0,
+    freeShippingThreshold: 50,
+    defaultShippingCost: 5.99,
+  },
+
+  // Notification Settings
+  notificationSettings: {
+    newOrderEmail: true,
+    vendorApplicationEmail: true,
+    lowStockAlert: true,
+    emailOrderConfirmation: true,
+    emailShippingUpdates: true,
+    emailNewVendorSignup: true,
+    emailLowStock: true,
+  },
+
+  // Security Settings
+  securitySettings: {
+    requireEmailVerification: true,
+    require2FA: false,
+    twoFactorRequired: false,
+    sessionTimeout: 30,
+    maxLoginAttempts: 5,
+  },
+
+  // Legacy flat fields (for backwards compatibility)
   default_commission_rate: 15,
   tax_rate: 0,
   free_shipping_threshold: 50,
   default_shipping_cost: 5.99,
-  currency: 'USD',
   review_auto_approve: false,
   vendor_auto_approve: false,
   maintenance_mode: false,

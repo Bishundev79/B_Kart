@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAdminStore } from '@/stores/adminStore';
@@ -55,12 +56,14 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { AdminProductListItem } from '@/types/admin';
+import type { ProductStatus } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
-const statusColors = {
+const statusColors: Record<ProductStatus, string> = {
   draft: 'bg-gray-100 text-gray-800',
   active: 'bg-green-100 text-green-800',
   inactive: 'bg-yellow-100 text-yellow-800',
+  out_of_stock: 'bg-orange-100 text-orange-800',
   archived: 'bg-red-100 text-red-800',
 };
 
@@ -280,9 +283,11 @@ export default function AdminProductsPage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               {product.imageUrl ? (
-                                <img
+                                <Image
                                   src={product.imageUrl}
                                   alt={product.name}
+                                  width={40}
+                                  height={40}
                                   className="h-10 w-10 rounded object-cover"
                                 />
                               ) : (

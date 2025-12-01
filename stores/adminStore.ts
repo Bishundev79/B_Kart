@@ -17,7 +17,7 @@ import type {
   AdminReviewFilters,
   AdminPagination,
 } from '@/types/admin';
-import type { ReviewStatus, ProductStatus } from '@/types/database';
+import type { ReviewStatus, ProductStatus, VendorStatus } from '@/types/database';
 
 interface AdminState {
   // Dashboard
@@ -241,9 +241,7 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
 
       set((state) => ({
         vendors: state.vendors.map((v) =>
-          v.id === vendorId
-            ? { ...v, status: status as 'pending' | 'active' | 'suspended' | 'rejected' }
-            : v
+          v.id === vendorId ? { ...v, status: status as VendorStatus } : v
         ),
       }));
       return true;

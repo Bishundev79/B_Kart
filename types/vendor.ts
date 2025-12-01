@@ -155,7 +155,7 @@ export interface VendorPayoutsResponse {
     total: number;
     totalPages: number;
   };
-  connect: VendorStripeConnectInfo;
+  connect?: VendorStripeConnectInfo | null;
 }
 
 // ============================================================================

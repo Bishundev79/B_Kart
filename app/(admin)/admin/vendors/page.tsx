@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useAdminStore } from '@/stores/adminStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -273,9 +274,11 @@ export default function AdminVendorsPage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               {vendor.logoUrl ? (
-                                <img
+                                <Image
                                   src={vendor.logoUrl}
                                   alt={vendor.storeName}
+                                  width={40}
+                                  height={40}
                                   className="h-10 w-10 rounded object-cover"
                                 />
                               ) : (
@@ -415,9 +418,11 @@ export default function AdminVendorsPage() {
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 {selectedVendor.logoUrl ? (
-                  <img
+                  <Image
                     src={selectedVendor.logoUrl}
                     alt={selectedVendor.storeName}
+                    width={80}
+                    height={80}
                     className="h-20 w-20 rounded object-cover"
                   />
                 ) : (

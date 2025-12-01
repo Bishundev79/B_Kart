@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useAdminStore } from '@/stores/adminStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -376,9 +377,11 @@ export default function AdminAnalyticsPage() {
                         {index + 1}
                       </span>
                       {product.imageUrl ? (
-                        <img
+                        <Image
                           src={product.imageUrl}
                           alt={product.name}
+                          width={40}
+                          height={40}
                           className="h-10 w-10 rounded object-cover"
                         />
                       ) : (
@@ -445,9 +448,11 @@ export default function AdminAnalyticsPage() {
                       #{index + 1}
                     </span>
                     {vendor.logoUrl ? (
-                      <img
+                      <Image
                         src={vendor.logoUrl}
                         alt={vendor.storeName}
+                        width={48}
+                        height={48}
                         className="h-12 w-12 rounded object-cover"
                       />
                     ) : (

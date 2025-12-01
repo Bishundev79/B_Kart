@@ -115,7 +115,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         sku: variantData.sku,
         price: variantData.price,
         compare_at_price: variantData.compare_at_price,
-        inventory_quantity: variantData.inventory_quantity,
+        quantity: variantData.quantity,
         options: variantData.options,
         image_url: variantData.image_url,
         is_active: variantData.is_active,

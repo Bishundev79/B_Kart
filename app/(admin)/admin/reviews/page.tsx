@@ -42,26 +42,24 @@ import {
   X,
   Eye,
   ExternalLink,
-  Flag,
   Clock,
   CheckCircle,
   XCircle,
 } from 'lucide-react';
 import { AdminReviewListItem } from '@/types/admin';
+import type { ReviewStatus } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
-const statusColors = {
+const statusColors: Record<ReviewStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
-  flagged: 'bg-orange-100 text-orange-800',
 };
 
-const statusIcons = {
+const statusIcons: Record<ReviewStatus, typeof Clock | typeof CheckCircle | typeof XCircle> = {
   pending: Clock,
   approved: CheckCircle,
   rejected: XCircle,
-  flagged: Flag,
 };
 
 export default function AdminReviewsPage() {
@@ -96,7 +94,7 @@ export default function AdminReviewsPage() {
     fetchReviews(filters);
   };
 
-  const handleStatusChange = async (reviewId: string, newStatus: 'approved' | 'rejected' | 'flagged') => {
+  const handleStatusChange = async (reviewId: string, newStatus: ReviewStatus) => {
     setUpdatingStatus(true);
     try {
       await updateReviewStatus(reviewId, newStatus);
@@ -145,7 +143,7 @@ export default function AdminReviewsPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setStatusFilter('pending')}>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -191,21 +189,6 @@ export default function AdminReviewsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setStatusFilter('flagged')}>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Flag className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Flagged</p>
-                <p className="text-2xl font-bold">
-                  {reviews.filter(r => r.status === 'flagged').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
@@ -236,7 +219,6 @@ export default function AdminReviewsPage() {
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="flagged">Flagged</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -279,7 +261,7 @@ export default function AdminReviewsPage() {
                       </TableRow>
                     ) : (
                       reviews.map((review) => {
-                        const StatusIcon = statusIcons[review.status as keyof typeof statusIcons] || Clock;
+                        const StatusIcon = statusIcons[review.status as ReviewStatus] || Clock;
                         return (
                           <TableRow key={review.id}>
                             <TableCell>
@@ -307,7 +289,7 @@ export default function AdminReviewsPage() {
                               <p className="truncate">{review.comment || 'No comment'}</p>
                             </TableCell>
                             <TableCell>
-                              <Badge className={statusColors[review.status as keyof typeof statusColors]} variant="secondary">
+                              <Badge className={statusColors[review.status as ReviewStatus]} variant="secondary">
                                 <StatusIcon className="h-3 w-3 mr-1" />
                                 {review.status}
                               </Badge>
@@ -346,17 +328,7 @@ export default function AdminReviewsPage() {
                                     </Button>
                                   </>
                                 )}
-                                {review.status !== 'flagged' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                    onClick={() => handleStatusChange(review.id, 'flagged')}
-                                    disabled={updatingStatus}
-                                  >
-                                    <Flag className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                {/* Additional moderation actions can be added here if needed */}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -424,7 +396,7 @@ export default function AdminReviewsPage() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium">{selectedReview.userName}</h4>
-                    <Badge className={statusColors[selectedReview.status as keyof typeof statusColors]} variant="secondary">
+                    <Badge className={statusColors[selectedReview.status as ReviewStatus]} variant="secondary">
                       {selectedReview.status}
                     </Badge>
                   </div>
@@ -492,19 +464,7 @@ export default function AdminReviewsPage() {
                     </Button>
                   </>
                 )}
-                {selectedReview.status !== 'flagged' && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      handleStatusChange(selectedReview.id, 'flagged');
-                      setShowDetailsDialog(false);
-                    }}
-                    disabled={updatingStatus}
-                  >
-                    <Flag className="h-4 w-4 mr-2" />
-                    Flag Review
-                  </Button>
-                )}
+                {/* Additional moderation CTA could go here (e.g. open report in another system) */}
               </DialogFooter>
             </div>
           )}

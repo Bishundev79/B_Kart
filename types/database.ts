@@ -6,8 +6,8 @@
 // ============================================================================
 
 export type UserRole = 'customer' | 'vendor' | 'admin';
-export type VendorStatus = 'pending' | 'active' | 'suspended' | 'rejected';
-export type ProductStatus = 'draft' | 'active' | 'inactive' | 'out_of_stock';
+export type VendorStatus = 'pending' | 'approved' | 'suspended' | 'rejected';
+export type ProductStatus = 'draft' | 'active' | 'inactive' | 'out_of_stock' | 'archived';
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 export type OrderItemStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
