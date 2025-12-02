@@ -20,9 +20,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     
     // Parse and validate request body
     const body = await request.json();
+    console.log('[API] PATCH cart item - body received:', body, 'itemId:', itemId);
+    
     const result = updateCartItemSchema.safeParse(body);
     
     if (!result.success) {
+      console.error('[API] Validation failed:', result.error.errors);
       return NextResponse.json(
         { error: result.error.errors[0].message },
         { status: 400 }

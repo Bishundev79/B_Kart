@@ -114,45 +114,57 @@ export const useCartStore = create<CartState>()((set, get) => ({
         throw new Error('Failed to fetch cart');
       }
       
-      const data = await response.json();
+      const response_data = await response.json();
+      
+      // API uses successResponse which wraps data in { data: {...}, message: ... }
+      const cartData = response_data.data;
+      
+      // Validate response structure
+      if (!cartData || !cartData.items || !Array.isArray(cartData.items)) {
+        console.error('Invalid cart response:', response_data);
+        set({ items: [], isLoading: false, initialized: true });
+        return;
+      }
           
-          // Transform API response to CartItemDisplay
-          const items: CartItemDisplay[] = data.items.map((item: {
-            id: string;
-            product_id: string;
-            variant_id: string | null;
+      // Transform API response to CartItemDisplay with safe property access
+      const items: CartItemDisplay[] = cartData.items
+        .filter((item: any) => item && item.product) // Filter out invalid items
+        .map((item: {
+          id: string;
+          product_id: string;
+          variant_id: string | null;
+          quantity: number;
+          product: {
+            name: string;
+            slug: string;
+            price: number;
+            compare_at_price: number | null;
             quantity: number;
-            product: {
-              name: string;
-              slug: string;
-              price: number;
-              compare_at_price: number | null;
-              quantity: number;
-              images: { url: string; is_primary: boolean }[];
-              vendor: { store_name: string; store_slug: string } | null;
-            };
-            variant: {
-              id: string;
-              name: string;
-              price: number;
-              compare_at_price: number | null;
-              quantity: number;
-            } | null;
-          }) => ({
-            id: item.id,
-            productId: item.product_id,
-            variantId: item.variant_id,
-            name: item.product.name,
-            variantName: item.variant?.name || null,
-            slug: item.product.slug,
-            price: item.variant?.price || item.product.price,
-            compareAtPrice: item.variant?.compare_at_price || item.product.compare_at_price,
-            quantity: item.quantity,
-            maxQuantity: item.variant?.quantity || item.product.quantity,
-            imageUrl: item.product.images.find((img) => img.is_primary)?.url || item.product.images[0]?.url || null,
-        vendorName: item.product.vendor?.store_name || null,
-        vendorSlug: item.product.vendor?.store_slug || null,
-      }));
+            images: { url: string; is_primary: boolean }[];
+            vendor: { store_name: string; store_slug: string } | null;
+          };
+          variant: {
+            id: string;
+            name: string;
+            price: number;
+            compare_at_price: number | null;
+            quantity: number;
+          } | null;
+        }) => ({
+          id: item.id,
+          productId: item.product_id,
+          variantId: item.variant_id || null,
+          name: item.product.name,
+          variantName: item.variant?.name || null,
+          slug: item.product.slug,
+          price: item.variant?.price || item.product.price,
+          compareAtPrice: item.variant?.compare_at_price || item.product.compare_at_price || null,
+          quantity: item.quantity,
+          maxQuantity: item.variant?.quantity || item.product.quantity || 0,
+          imageUrl: item.product.images?.find((img) => img.is_primary)?.url || item.product.images?.[0]?.url || null,
+          vendorName: item.product.vendor?.store_name || null,
+          vendorSlug: item.product.vendor?.store_slug || null,
+        }));
       
       set({ items, isLoading: false, initialized: true });
     } catch (error) {
@@ -175,32 +187,41 @@ export const useCartStore = create<CartState>()((set, get) => ({
             body: JSON.stringify(input),
           });
           
-          const data = await response.json();
+          const response_data = await response.json();
           
           if (!response.ok) {
-            throw new Error(data.error || 'Failed to add item to cart');
+            throw new Error(response_data.error || 'Failed to add item to cart');
+          }
+          
+          // API uses successResponse which wraps data in { data: {...}, message: ... }
+          const item = response_data.data?.item;
+          
+          // Validate the response structure
+          if (!item || !item.product) {
+            console.error('Invalid API response structure:', response_data);
+            throw new Error('Invalid cart response from server');
           }
           
           // Check if item already exists in cart
           const existingIndex = get().items.findIndex(
-            (item) => item.productId === input.productId && item.variantId === (input.variantId || null)
+            (i) => i.productId === input.productId && i.variantId === (input.variantId || null)
           );
           
           const newItem: CartItemDisplay = {
-            id: data.item.id,
-            productId: data.item.product_id,
-            variantId: data.item.variant_id,
-            name: data.item.product.name,
-            variantName: data.item.variant?.name || null,
-            slug: data.item.product.slug,
-            price: data.item.variant?.price || data.item.product.price,
-            compareAtPrice: data.item.variant?.compare_at_price || data.item.product.compare_at_price,
-            quantity: data.item.quantity,
-            maxQuantity: data.item.variant?.inventory_quantity || data.item.product.inventory_quantity,
-            imageUrl: data.item.product.images.find((img: { is_primary: boolean }) => img.is_primary)?.url || 
-                      data.item.product.images[0]?.url || null,
-            vendorName: data.item.product.vendor?.store_name || null,
-            vendorSlug: data.item.product.vendor?.store_slug || null,
+            id: item.id,
+            productId: item.product_id,
+            variantId: item.variant_id || null,
+            name: item.product.name,
+            variantName: item.variant?.name || null,
+            slug: item.product.slug,
+            price: item.variant?.price || item.product.price,
+            compareAtPrice: item.variant?.compare_at_price || item.product.compare_at_price || null,
+            quantity: item.quantity,
+            maxQuantity: item.variant?.inventory_quantity || item.product.inventory_quantity || 0,
+            imageUrl: item.product.images?.find((img: { is_primary: boolean }) => img.is_primary)?.url || 
+                      item.product.images?.[0]?.url || null,
+            vendorName: item.product.vendor?.store_name || null,
+            vendorSlug: item.product.vendor?.store_slug || null,
           };
           
           if (existingIndex >= 0) {

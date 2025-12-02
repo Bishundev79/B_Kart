@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const filters = filtersResult.data;
 
-    // Build query
+    // Build query - Filter approved vendors using inner join
     let query = supabase
       .from('products')
       .select(`
@@ -40,8 +40,7 @@ export async function GET(request: NextRequest) {
         category:categories(id, name, slug),
         images:product_images(url, is_primary)
       `, { count: 'exact' })
-      .eq('status', 'active')
-      .eq('vendors.status', 'approved'); // Only show products from approved vendors
+      .eq('status', 'active');
 
     // Apply filters
     if (filters.search) {

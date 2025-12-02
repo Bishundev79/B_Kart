@@ -98,25 +98,38 @@ export async function GET() {
     }
     
     // Transform and filter out items with unavailable products
-    const validItems = (items || []).filter((item) => {
-      const product = item.product as unknown as ProductData | null;
-      return product && product.status === 'active';
-    }).map((item) => {
-      const productData = item.product as unknown as ProductData;
-      const variantData = item.variant as unknown as VariantData | null;
-      
-      return {
-        ...item,
-        product: {
-          ...productData,
-          inventory_quantity: productData?.quantity || 0,
-        },
-        variant: variantData ? {
-          ...variantData,
-          inventory_quantity: variantData.quantity || 0,
-        } : null,
-      };
-    });
+    const validItems = (items || [])
+      .filter((item) => {
+        const productRaw = item.product as any;
+        const product = Array.isArray(productRaw) ? productRaw[0] : productRaw;
+        return product && product.status === 'active';
+      })
+      .map((item) => {
+        // Handle potential array returns from Supabase joins
+        const productRaw = item.product as any;
+        const variantRaw = item.variant as any;
+        const vendorRaw = productRaw?.vendor;
+        const imagesRaw = productRaw?.images;
+        
+        const productData = Array.isArray(productRaw) ? productRaw[0] : productRaw;
+        const variantData = Array.isArray(variantRaw) ? variantRaw[0] : variantRaw;
+        const vendorData = Array.isArray(vendorRaw) ? vendorRaw[0] : vendorRaw;
+        const imagesData = Array.isArray(imagesRaw) ? imagesRaw : [];
+        
+        return {
+          ...item,
+          product: {
+            ...productData,
+            inventory_quantity: productData?.quantity || 0,
+            vendor: vendorData || null,
+            images: imagesData,
+          },
+          variant: variantData ? {
+            ...variantData,
+            inventory_quantity: variantData.quantity || 0,
+          } : null,
+        };
+      });
     
     // Calculate summary
     const summary = {
@@ -311,15 +324,36 @@ export async function POST(request: Request) {
       return serverErrorResponse('Failed to fetch cart item');
     }
     
-    // Transform response
-    const productData = fullItem.product as unknown as ProductData;
-    const variantData = fullItem.variant as unknown as VariantData | null;
+    // Handle the case where product or vendor might be null/undefined
+    if (!fullItem || !fullItem.product) {
+      console.error('Cart item missing product data:', fullItem);
+      return serverErrorResponse('Cart item data incomplete');
+    }
+    
+    // Transform response - handle both object and array cases for relations
+    const productRaw = fullItem.product as any;
+    const variantRaw = fullItem.variant as any;
+    const vendorRaw = productRaw?.vendor;
+    const imagesRaw = productRaw?.images;
+    
+    // Ensure product is an object (not array)
+    const productData = Array.isArray(productRaw) ? productRaw[0] : productRaw;
+    const variantData = Array.isArray(variantRaw) ? variantRaw[0] : variantRaw;
+    const vendorData = Array.isArray(vendorRaw) ? vendorRaw[0] : vendorRaw;
+    const imagesData = Array.isArray(imagesRaw) ? imagesRaw : [];
+    
+    if (!productData) {
+      console.error('Product data is null or invalid');
+      return serverErrorResponse('Product not found');
+    }
     
     const responseItem = {
       ...fullItem,
       product: {
         ...productData,
-        inventory_quantity: productData?.quantity || 0,
+        inventory_quantity: productData.quantity || 0,
+        vendor: vendorData || null,
+        images: imagesData,
       },
       variant: variantData ? {
         ...variantData,

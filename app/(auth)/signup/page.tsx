@@ -10,7 +10,7 @@ export default function SignupPage() {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold">Create an account</h1>
         <p className="text-muted-foreground mt-2">
-          Join B_Kart to start shopping or selling
+          Join B_Kart to start shopping
         </p>
       </div>
       

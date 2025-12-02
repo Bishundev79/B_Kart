@@ -78,6 +78,65 @@ const US_STATES = [
   { value: 'WY', label: 'Wyoming' },
 ];
 
+// Indian States
+const INDIAN_STATES = [
+  { value: 'AN', label: 'Andaman and Nicobar Islands' },
+  { value: 'AP', label: 'Andhra Pradesh' },
+  { value: 'AR', label: 'Arunachal Pradesh' },
+  { value: 'AS', label: 'Assam' },
+  { value: 'BR', label: 'Bihar' },
+  { value: 'CH', label: 'Chandigarh' },
+  { value: 'CG', label: 'Chhattisgarh' },
+  { value: 'DN', label: 'Dadra and Nagar Haveli' },
+  { value: 'DD', label: 'Daman and Diu' },
+  { value: 'DL', label: 'Delhi' },
+  { value: 'GA', label: 'Goa' },
+  { value: 'GJ', label: 'Gujarat' },
+  { value: 'HR', label: 'Haryana' },
+  { value: 'HP', label: 'Himachal Pradesh' },
+  { value: 'JK', label: 'Jammu and Kashmir' },
+  { value: 'JH', label: 'Jharkhand' },
+  { value: 'KA', label: 'Karnataka' },
+  { value: 'KL', label: 'Kerala' },
+  { value: 'LA', label: 'Ladakh' },
+  { value: 'LD', label: 'Lakshadweep' },
+  { value: 'MP', label: 'Madhya Pradesh' },
+  { value: 'MH', label: 'Maharashtra' },
+  { value: 'MN', label: 'Manipur' },
+  { value: 'ML', label: 'Meghalaya' },
+  { value: 'MZ', label: 'Mizoram' },
+  { value: 'NL', label: 'Nagaland' },
+  { value: 'OR', label: 'Odisha' },
+  { value: 'PY', label: 'Puducherry' },
+  { value: 'PB', label: 'Punjab' },
+  { value: 'RJ', label: 'Rajasthan' },
+  { value: 'SK', label: 'Sikkim' },
+  { value: 'TN', label: 'Tamil Nadu' },
+  { value: 'TS', label: 'Telangana' },
+  { value: 'TR', label: 'Tripura' },
+  { value: 'UP', label: 'Uttar Pradesh' },
+  { value: 'UK', label: 'Uttarakhand' },
+  { value: 'WB', label: 'West Bengal' },
+];
+
+// Countries
+const COUNTRIES = [
+  { value: 'IN', label: 'India' },
+  { value: 'US', label: 'United States' },
+];
+
+// Get states based on selected country
+const getStatesForCountry = (country: string) => {
+  switch (country) {
+    case 'IN':
+      return INDIAN_STATES;
+    case 'US':
+      return US_STATES;
+    default:
+      return [];
+  }
+};
+
 interface Address {
   id: string;
   full_name: string;
@@ -105,6 +164,7 @@ export function ShippingAddressForm({
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(savedAddresses.length === 0);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState('IN'); // Default to India
   
   const form = useForm<ShippingAddressInput>({
     resolver: zodResolver(shippingAddressSchema),
@@ -116,7 +176,7 @@ export function ShippingAddressForm({
       city: '',
       state: '',
       postalCode: '',
-      country: 'US',
+      country: 'IN', // Default to India
     },
   });
   
@@ -301,7 +361,7 @@ export function ShippingAddressForm({
                   <FormItem>
                     <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Input placeholder="San Francisco" {...field} />
+                      <Input placeholder={selectedCountry === 'IN' ? 'Mumbai' : 'San Francisco'} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -314,14 +374,17 @@ export function ShippingAddressForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>State</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select state" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {US_STATES.map((state) => (
+                        {getStatesForCountry(selectedCountry).map((state) => (
                           <SelectItem key={state.value} value={state.value}>
                             {state.label}
                           </SelectItem>
@@ -340,9 +403,9 @@ export function ShippingAddressForm({
                 name="postalCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ZIP Code</FormLabel>
+                    <FormLabel>{selectedCountry === 'IN' ? 'PIN Code' : 'ZIP Code'}</FormLabel>
                     <FormControl>
-                      <Input placeholder="94102" {...field} />
+                      <Input placeholder={selectedCountry === 'IN' ? '400001' : '94102'} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -355,9 +418,28 @@ export function ShippingAddressForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Country</FormLabel>
-                    <FormControl>
-                      <Input {...field} disabled />
-                    </FormControl>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setSelectedCountry(value);
+                        // Reset state when country changes
+                        form.setValue('state', '');
+                      }}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {COUNTRIES.map((country) => (
+                          <SelectItem key={country.value} value={country.value}>
+                            {country.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

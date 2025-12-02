@@ -22,7 +22,6 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signupSchema, type SignupFormData } from '@/lib/validations/auth';
 import { useAuthStore } from '@/stores/authStore';
-import { RoleSelector } from './RoleSelector';
 import { GoogleSignInButton } from './GoogleSignInButton';
 
 export function SignupForm() {
@@ -50,7 +49,6 @@ export function SignupForm() {
     },
   });
 
-  const selectedRole = watch('role');
   const termsAccepted = watch('terms');
 
   const onSubmit = async (data: SignupFormData) => {
@@ -59,7 +57,7 @@ export function SignupForm() {
       email: data.email,
       password: data.password,
       full_name: data.full_name,
-      role: data.role,
+      role: 'customer', // Default all signups to customer
     });
 
     if (!result.error) {
@@ -221,17 +219,6 @@ export function SignupForm() {
               <p className="text-sm text-destructive">
                 {errors.confirmPassword.message}
               </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Account Type</Label>
-            <RoleSelector
-              value={selectedRole}
-              onChange={(value) => setValue('role', value)}
-            />
-            {errors.role && (
-              <p className="text-sm text-destructive">{errors.role.message}</p>
             )}
           </div>
 

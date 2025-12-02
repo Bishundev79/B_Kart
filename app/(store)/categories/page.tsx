@@ -18,7 +18,17 @@ export default async function CategoriesPage() {
     .from('categories')
     .select('id, name, slug, description, image_url')
     .is('parent_id', null)
-    .order('name');
+    .order('sort_order');
+
+  // Map category images to Unsplash placeholders
+  const categoryImageMap: Record<string, string> = {
+    'electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=800&q=80',
+    'fashion': 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&q=80',
+    'home-garden': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80',
+    'sports-outdoors': 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=80',
+    'beauty-health': 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800&q=80',
+    'toys-games': 'https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=800&q=80',
+  };
 
   if (error) {
     console.error('Error fetching categories:', error);
@@ -63,51 +73,58 @@ export default async function CategoriesPage() {
               <p className="text-muted-foreground">Failed to load categories.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {categories?.map((category, index) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {categories?.map((category, index) => {
+                // Get image from map or fallback to original
+                const imageUrl = categoryImageMap[category.slug] || category.image_url;
+                
+                return (
                 <Link 
                   key={category.id} 
                   href={`/categories/${category.slug}`}
-                  className="group"
+                  className="group block"
                 >
-                  <Card className="h-full overflow-hidden border-2 transition-all duration-300 hover:border-primary/50 hover:shadow-glow hover:-translate-y-2 animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
+                  <Card className="h-full overflow-hidden border-2 transition-all duration-300 hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                     <CardContent className="p-0">
-                      {category.image_url ? (
-                        <div className="relative w-full h-48 overflow-hidden bg-gradient-to-br from-muted to-muted/50">
+                      <div className="relative w-full aspect-[4/3] overflow-hidden bg-gradient-to-br from-muted to-muted/50">
+                        {imageUrl ? (
                           <Image
-                            src={category.image_url}
+                            src={imageUrl}
                             alt={category.name}
                             fill
-                            className="object-cover transition-all duration-500 group-hover:scale-110 group-hover:rotate-1"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            className="object-cover transition-all duration-500 group-hover:scale-110"
+                            placeholder="blur"
+                            blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2YzZjRmNiIvPjwvc3ZnPg=="
+                            priority={index < 3}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                          
-                          {/* Shine effect */}
-                          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                        </div>
-                      ) : (
-                        <div className="relative w-full h-48 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 flex items-center justify-center">
-                          <Grid3x3 className="h-16 w-16 text-muted-foreground/30" />
-                        </div>
-                      )}
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10 flex items-center justify-center">
+                            <Grid3x3 className="h-16 w-16 text-muted-foreground/30" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                        
+                        {/* Shine effect */}
+                        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                      </div>
                       
-                      <div className="p-6">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-xl font-bold group-hover:text-primary transition-colors">
+                      <div className="p-5">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <h3 className="text-lg font-bold group-hover:text-primary transition-colors leading-tight">
                             {category.name}
                           </h3>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" />
                         </div>
-                        {category.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {category.description}
-                          </p>
-                        )}
+                        <p className="text-sm text-muted-foreground line-clamp-2 min-h-[2.5rem]">
+                          {category.description || 'Explore our collection'}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
-              ))}
+              );
+              })}
             </div>
           )}
 

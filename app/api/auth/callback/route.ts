@@ -75,9 +75,8 @@ export async function GET(request: Request) {
                        user.user_metadata?.avatar_url ||
                        null;
 
-      // Check if role was stored in localStorage (via state parameter)
-      const intendedRole = user.user_metadata?.intended_role as UserRole | undefined;
-      userRole = intendedRole || 'customer';
+      // All new signups default to customer role
+      userRole = 'customer';
 
       console.log('[OAuth Callback] Creating profile with:', { 
         userId: user.id, 
@@ -123,14 +122,7 @@ export async function GET(request: Request) {
       console.log('[OAuth Callback] Existing profile found with role:', userRole);
     }
 
-    // Step 4: For new OAuth users, redirect to role selection if role is customer (default)
-    // This allows them to choose vendor if they want
-    if (profileCreated && userRole === 'customer') {
-      console.log('[OAuth Callback] New OAuth user, redirecting to role selection');
-      return NextResponse.redirect(`${origin}/select-role`);
-    }
-
-    // Step 5: Redirect based on user role
+    // Step 4: Redirect based on user role
     console.log('[OAuth Callback] Redirecting user based on role:', userRole);
     
     if (userRole === 'admin') {
@@ -151,8 +143,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/vendor/dashboard`);
     }
     
-    // Customer goes to account page
-    return NextResponse.redirect(`${origin}/account`);
+    // Customer goes to home page
+    return NextResponse.redirect(`${origin}/`);
     
   } catch (error: any) {
     console.error('[OAuth Callback] Unexpected error:', error);
