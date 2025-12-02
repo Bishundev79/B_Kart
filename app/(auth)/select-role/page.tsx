@@ -118,7 +118,7 @@ export default function SelectRolePage() {
                 <ShoppingBag className="h-12 w-12 text-primary" />
               </div>
             </div>
-            <CardTitle className="text-center text-2xl">I'm a Customer</CardTitle>
+            <CardTitle className="text-center text-2xl">I&apos;m a Customer</CardTitle>
             <CardDescription className="text-center">
               Browse and purchase products from various vendors
             </CardDescription>
@@ -163,7 +163,7 @@ export default function SelectRolePage() {
                 <Store className="h-12 w-12 text-primary" />
               </div>
             </div>
-            <CardTitle className="text-center text-2xl">I'm a Vendor</CardTitle>
+            <CardTitle className="text-center text-2xl">I&apos;m a Vendor</CardTitle>
             <CardDescription className="text-center">
               Set up your store and start selling products
             </CardDescription>
@@ -203,7 +203,7 @@ export default function SelectRolePage() {
       </div>
 
       <p className="mt-8 text-sm text-muted-foreground text-center max-w-2xl">
-        You can always shop as a customer even if you're a vendor. Choose vendor if you plan to sell products on our platform.
+        You can always shop as a customer even if you&apos;re a vendor. Choose vendor if you plan to sell products on our platform.
       </p>
     </div>
   );

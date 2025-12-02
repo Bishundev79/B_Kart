@@ -20,6 +20,15 @@ export async function POST(request: Request) {
 
     const { email, password, full_name, role } = validationResult.data;
 
+    // Check for required environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error('[Signup API] Missing Supabase environment variables');
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Create user with Supabase Auth
@@ -32,7 +41,7 @@ export async function POST(request: Request) {
           full_name,
           role,
         },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/callback`,
       },
     });
 
@@ -47,6 +56,8 @@ export async function POST(request: Request) {
         errorMessage = 'Password must be at least 6 characters long';
       } else if (error.message.includes('invalid email')) {
         errorMessage = 'Please provide a valid email address';
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = 'Too many signup attempts. Please try again later.';
       }
       
       return NextResponse.json(
@@ -91,48 +102,52 @@ export async function POST(request: Request) {
       }
 
       retryCount++;
+      console.log('[Signup API] Profile not found, retry:', retryCount);
     }
 
     // Fallback: Create profile manually if trigger failed
     if (!profile) {
       console.warn('[Signup API] Profile not created by trigger, creating manually...');
       
-      const adminClient = createAdminClient();
-      const { data: manualProfile, error: manualCreateError } = await adminClient
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          full_name,
-          role,
-          avatar_url: null,
-          phone: null,
-        })
-        .select()
-        .single();
+      try {
+        const adminClient = createAdminClient();
+        const { data: manualProfile, error: manualCreateError } = await adminClient
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            full_name,
+            role,
+            avatar_url: null,
+            phone: null,
+          })
+          .select()
+          .single();
 
-      if (manualCreateError) {
-        // Check if it's a duplicate (race condition)
-        if (manualCreateError.code === '23505') {
-          console.log('[Signup API] Profile created in race condition, fetching...');
-          const { data: raceProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-          
-          if (raceProfile) {
-            profile = raceProfile;
+        if (manualCreateError) {
+          // Check if it's a duplicate (race condition)
+          if (manualCreateError.code === '23505') {
+            console.log('[Signup API] Profile created in race condition, fetching...');
+            const { data: raceProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', data.user.id)
+              .single();
+            
+            if (raceProfile) {
+              profile = raceProfile;
+            }
+          } else {
+            console.error('[Signup API] Manual profile creation failed:', manualCreateError);
+            // Don't fail the signup - user account is created, profile can be fixed later
+            console.log('[Signup API] Continuing despite profile creation failure');
           }
         } else {
-          console.error('[Signup API] Manual profile creation failed:', manualCreateError);
-          return NextResponse.json(
-            { error: 'Account created but profile setup failed. Please contact support.' },
-            { status: 500 }
-          );
+          profile = manualProfile;
+          console.log('[Signup API] Profile created manually');
         }
-      } else {
-        profile = manualProfile;
-        console.log('[Signup API] Profile created manually');
+      } catch (adminError: any) {
+        console.error('[Signup API] Admin client error:', adminError);
+        // Continue without failing - the user is created
       }
     }
 
@@ -169,6 +184,7 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error('[Signup API] Unexpected error:', error);
+    console.error('[Signup API] Error stack:', error?.stack);
     return NextResponse.json(
       { error: error?.message || 'An unexpected error occurred' },
       { status: 500 }
